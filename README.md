@@ -505,6 +505,18 @@ public class ArrayList<E> extends AbstractList<E>
 }
 ```
 
+## 初始化
+
+`````java
+//ArrayList空参构造
+public ArrayList() {
+    this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
+}
+
+//DEFAULTCAPACITY_EMPTY_ELEMENTDATA是一个size为0的数组
+private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
+`````
+
 
 
 ## 扩容
@@ -516,14 +528,6 @@ public class ArrayList<E> extends AbstractList<E>
 - `DEFAULT_CAPACITY`: 默认容量为10
 
 ```java
-//ArrayList空参构造
-public ArrayList() {
-    this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
-}
-
-//DEFAULTCAPACITY_EMPTY_ELEMENTDATA是一个size为0的数组
-private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
-
 public boolean add(E e) {
     modCount++;
     add(e, elementData, size);
@@ -580,5 +584,342 @@ public static int newLength(int oldLength, int minGrowth, int prefGrowth) {
 
 以无参数构造方法创建 `ArrayList` 时，实际上初始化赋值的是一个空数组。当真正对数组进行添加元素操作时，才真正分配容量。即向数组中添加第一个元素时，数组容量扩为 10。
 
+# LinkedList
 
+## Node源码
 
+```java
+private static class Node<E> {
+    E item;// 节点值
+    Node<E> next; // 指向的下一个节点（后继节点）
+    Node<E> prev; // 指向的前一个节点（前驱结点）
+
+    // 初始化参数顺序分别是：前驱结点、本身节点值、后继节点
+    Node(Node<E> prev, E element, Node<E> next) {
+        this.item = element;
+        this.next = next;
+        this.prev = prev;
+    }
+}
+```
+
+## 初始化
+
+```java
+//无参构造
+public LinkedList() {
+}
+
+/**
+ * Constructs a list containing the elements of the specified
+ * collection, in the order they are returned by the collection's
+ * iterator.
+ *
+ * @param  c the collection whose elements are to be placed into this list
+ * @throws NullPointerException if the specified collection is null
+ */
+public LinkedList(Collection<? extends E> c) {
+    this();
+    addAll(c);
+}
+```
+
+## 添加元素
+
+```java
+/**
+ * 尾插法
+ * Appends the specified element to the end of this list.
+ *
+ * <p>This method is equivalent to {@link #addLast}.
+ *
+ * @param e element to be appended to this list
+ * @return {@code true} (as specified by {@link Collection#add})
+ */
+public boolean add(E e) {
+    linkLast(e);
+    return true;
+}
+
+/**
+ * 在指定位置插入元素
+ * Inserts the specified element at the specified position in this list.
+ * Shifts the element currently at that position (if any) and any
+ * subsequent elements to the right (adds one to their indices).
+ *
+ * @param index index at which the specified element is to be inserted
+ * @param element element to be inserted
+ * @throws IndexOutOfBoundsException {@inheritDoc}
+ */
+public void add(int index, E element) {
+    // 下标越界检查
+    checkPositionIndex(index);
+
+    // 判断 index 是不是链表尾部位置
+    if (index == size)
+        // 如果是就直接调用 linkLast 方法将元素节点插入链表尾部即可
+        linkLast(element);
+    else
+        // 如果不是则调用 linkBefore 方法将其插入指定元素之前
+        linkBefore(element, node(index));
+}
+
+/**
+ * Links e as last element.
+ * 将元素插入到链表尾部
+ */
+void linkLast(E e) {
+    // 将最后一个元素赋值（引用传递）给节点 l
+    final Node<E> l = last;
+    // 创建节点，并指定节点前驱为链表尾节点 last，后继引用为空
+    final Node<E> newNode = new Node<>(l, e, null);
+    // 将 last 引用指向新节点
+    last = newNode;
+    // 判断尾节点是否为空
+    // 如果 l 是null 意味着这是第一次添加元素
+    if (l == null)
+        // 如果是第一次添加，将first赋值为新节点，此时链表只有一个元素
+        first = newNode;
+    else
+        // 如果不是第一次添加，将新节点赋值给l（添加前的最后一个元素）的next
+        l.next = newNode;
+    size++;
+    modCount++;
+}
+
+/**
+ * Inserts element e before non-null Node succ.
+ * 在指定元素之前插入元素
+ */
+
+void linkBefore(E e, Node<E> succ) {
+    // assert succ != null;断言 succ不为 null
+    // 定义一个节点元素保存 succ 的 prev 引用，也就是它的前一节点信息
+    final Node<E> pred = succ.prev;
+    // 初始化节点，并指明前驱和后继节点
+    final Node<E> newNode = new Node<>(pred, e, succ);
+    // 将 succ 节点前驱引用 prev 指向新节点
+    succ.prev = newNode;
+    // 判断尾节点是否为空，为空表示当前链表还没有节点
+    if (pred == null)
+        first = newNode;
+    else
+        // succ 节点前驱的后继引用指向新节点
+        pred.next = newNode;
+    size++;
+    modCount++;
+}
+```
+
+## 获取元素
+
+```java
+/**
+ * Returns the first element in this list.
+ * 返回链表的头元素
+ *
+ * @return the first element in this list
+ * @throws NoSuchElementException if this list is empty
+ */
+public E getFirst() {
+    final Node<E> f = first;
+    if (f == null)
+        throw new NoSuchElementException();
+    return f.item;
+}
+
+/**
+ * Returns the last element in this list.
+ * 返回链表的尾元素
+ * @return the last element in this list
+ * @throws NoSuchElementException if this list is empty
+ */
+public E getLast() {
+    final Node<E> l = last;
+    if (l == null)
+        throw new NoSuchElementException();
+    return l.item;
+}
+
+/**
+ * Returns the element at the specified position in this list.
+ * 返回指定元素
+ * @param index index of the element to return
+ * @return the element at the specified position in this list
+ * @throws IndexOutOfBoundsException {@inheritDoc}
+ */
+public E get(int index) {
+  // 下标越界检查，如果越界就抛异常
+  // assert index >= 0 && index < size
+  checkElementIndex(index);
+  // 返回链表中对应下标的元素
+  return node(index).item;
+}
+
+/**
+ * Returns the (non-null) Node at the specified element index.
+ * 返回指定非空节点
+ */
+Node<E> node(int index) {
+    // 断言下标未越界
+    // assert isElementIndex(index); (index >= 0 && index < size)
+    // 如果index小于size的二分之一  从前开始查找（向后查找）  反之向前查找
+    if (index < (size >> 1)) {
+        Node<E> x = first;
+        // 遍历，循环向后查找，直至 i == index
+        for (int i = 0; i < index; i++)
+            x = x.next;
+        return x;
+    } else {
+        Node<E> x = last;
+        for (int i = size - 1; i > index; i--)
+            x = x.prev;
+        return x;
+    }
+}
+```
+
+## 删除元素
+
+```java
+/**
+ * Removes and returns the first element from this list.
+ * 删除并返回链表的第一个元素
+ *
+ * @return the first element from this list
+ * @throws NoSuchElementException if this list is empty
+ */
+public E removeFirst() {
+    final Node<E> f = first;
+    if (f == null)
+        throw new NoSuchElementException();
+    return unlinkFirst(f);
+}
+
+/**
+ * Removes and returns the last element from this list.
+ * 删除并返回链表的最后一个元素
+ * @return the last element from this list
+ * @throws NoSuchElementException if this list is empty
+ */
+public E removeLast() {
+    final Node<E> l = last;
+    if (l == null)
+        throw new NoSuchElementException();
+    return unlinkLast(l);
+}
+
+/**
+ * Removes the first occurrence of the specified element from this list, if it is present.  
+ * If this list does not contain the element, it is unchanged.  
+ * More formally, removes the element with the lowest index
+ * 删除链表中首次出现的指定元素，如果不存在该元素则返回 false
+ *
+ * {@code i} such that
+ * {@code Objects.equals(o, get(i))}
+ * (if such an element exists).  Returns {@code true} if this list
+ * contained the specified element (or equivalently, if this list
+ * changed as a result of the call).
+ *
+ * @param o element to be removed from this list, if present
+ * @return {@code true} if this list contained the specified element
+ */
+public boolean remove(Object o) {
+    if (o == null) {
+        for (Node<E> x = first; x != null; x = x.next) {
+            if (x.item == null) {
+                unlink(x);
+                return true;
+            }
+        }
+    } else {
+        for (Node<E> x = first; x != null; x = x.next) {
+            if (o.equals(x.item)) {
+                unlink(x);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Removes the element at the specified position in this list.  Shifts any
+ * subsequent elements to the left (subtracts one from their indices).
+ * Returns the element that was removed from the list.
+ * 删除链表指定位置的元素
+ *
+ * @param index the index of the element to be removed
+ * @return the element previously at the specified position
+ * @throws IndexOutOfBoundsException {@inheritDoc}
+ */
+public E remove(int index) {
+    checkElementIndex(index);
+    return unlink(node(index));
+}
+
+/**
+ * Retrieves and removes the head (first element) of this list.
+ *
+ * @return the head of this list
+ * @throws NoSuchElementException if this list is empty
+ * @since 1.5
+ */
+public E remove() {
+    return removeFirst();
+}
+
+/**
+ * Unlinks non-null node x.
+ * 
+ */
+E unlink(Node<E> x) {
+    // 断言 x 不为 null
+    // assert x != null;
+    // 获取当前节点（也就是待删除节点）的元素
+    final E element = x.item;
+    // 获取当前节点的下一个节点
+    final Node<E> next = x.next;
+    // 获取当前节点的前一个节点
+    final Node<E> prev = x.prev;
+
+    // 如果前一个节点为空，则说明当前节点是头节点
+    if (prev == null) {
+        // 直接让链表头指向当前节点的下一个节点
+        first = next;
+    } else { // 如果前一个节点不为空
+        // 将前一个节点的 next 指针指向当前节点的下一个节点
+        prev.next = next;
+        // 将当前节点的 prev 指针置为 null，，方便 GC 回收
+        x.prev = null;
+    }
+
+    // 如果下一个节点为空，则说明当前节点是尾节点
+    if (next == null) {
+        // 直接让链表尾指向当前节点的前一个节点
+        last = prev;
+    } else { // 如果下一个节点不为空
+        // 将下一个节点的 prev 指针指向当前节点的前一个节点
+        next.prev = prev;
+        // 将当前节点的 next 指针置为 null，方便 GC 回收
+        x.next = null;
+    }
+
+    // 将当前节点元素置为 null，方便 GC 回收
+    x.item = null;
+    size--;
+    modCount++;
+    return element;
+}
+```
+
+`unlink()` 方法的逻辑如下：
+
+1. 首先获取待删除节点 x 的前驱和后继节点；
+2. 判断待删除节点是否为头节点或尾节点： 
+   - 如果 x 是头节点，则将 first 指向 x 的后继节点 next
+   - 如果 x 是尾节点，则将 last 指向 x 的前驱节点 prev
+   - 如果 x 不是头节点也不是尾节点，执行下一步操作
+3. 将待删除节点 x 的前驱的后继指向待删除节点的后继 next，断开 x 和 x.prev 之间的链接；
+4. 将待删除节点 x 的后继的前驱指向待删除节点的前驱 prev，断开 x 和 x.next 之间的链接；
+5. 将待删除节点 x 的元素置空，修改链表长度。
